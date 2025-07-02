@@ -1,0 +1,681 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls static %}
+
+{% block title %}用户分析仪表板{% endblock %}
+
+{% block extrahead %}
+<style>
+:root {
+    --primary-color: #6c5ce7;
+    --secondary-color: #a29bfe;
+    --success-color: #00b894;
+    --warning-color: #fdcb6e;
+    --danger-color: #e84393;
+    --info-color: #74b9ff;
+    --purple-color: #6c5ce7;
+    --dark-color: #2d3436;
+    --light-color: #f8f9fa;
+    --text-color: #2d3436;
+    --shadow: 0 4px 20px rgba(0,0,0,0.1);
+    --border-radius: 16px;
+}
+
+.analytics-container {
+    background: linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%);
+    min-height: 100vh;
+    padding: 20px;
+    margin: -20px;
+    font-family: 'Microsoft YaHei', 'PingFang SC', 'Helvetica Neue', Arial, sans-serif;
+}
+
+.analytics-header {
+    text-align: center;
+    color: white;
+    margin-bottom: 30px;
+}
+
+.analytics-header h1 {
+    font-size: 2.8rem;
+    margin-bottom: 10px;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+    font-weight: 600;
+    color: #ffffff;
+}
+
+.analytics-header .subtitle {
+    font-size: 1.2rem;
+    opacity: 0.9;
+    margin-bottom: 5px;
+}
+
+.stats-overview {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.overview-card {
+    background: white;
+    border-radius: var(--border-radius);
+    padding: 25px;
+    text-align: center;
+    box-shadow: var(--shadow);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.overview-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--primary-color), var(--success-color));
+}
+
+.overview-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+}
+
+.overview-card .icon {
+    font-size: 2.5rem;
+    margin-bottom: 10px;
+    display: block;
+}
+
+.overview-card .number {
+    font-size: 2.2rem;
+    font-weight: bold;
+    color: var(--primary-color);
+    margin-bottom: 5px;
+}
+
+.overview-card .label {
+    color: var(--text-color);
+    font-weight: 500;
+    text-transform: uppercase;
+    font-size: 0.9rem;
+    letter-spacing: 0.5px;
+}
+
+.analytics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 25px;
+    margin-bottom: 30px;
+}
+
+.analytics-card {
+    background: white;
+    border-radius: var(--border-radius);
+    padding: 30px;
+    box-shadow: var(--shadow);
+    transition: all 0.3s ease;
+}
+
+.analytics-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+}
+
+.analytics-card h3 {
+    margin: 0 0 25px 0;
+    color: var(--text-color);
+    font-size: 1.4rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    border-bottom: 3px solid var(--secondary-color);
+    padding-bottom: 15px;
+}
+
+.analytics-card h3 .icon {
+    margin-right: 10px;
+    font-size: 1.6rem;
+}
+
+.growth-chart {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    height: 200px;
+    margin-bottom: 15px;
+    padding: 0 10px;
+}
+
+.growth-bar {
+    flex: 1;
+    background: linear-gradient(to top, var(--primary-color), var(--info-color));
+    margin: 0 2px;
+    border-radius: 4px 4px 0 0;
+    position: relative;
+    transition: all 0.3s ease;
+    min-height: 10px;
+}
+
+.growth-bar:hover {
+    background: linear-gradient(to top, var(--success-color), var(--warning-color));
+    transform: scaleY(1.1);
+}
+
+.growth-bar::after {
+    content: attr(data-count);
+    position: absolute;
+    top: -25px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.8rem;
+    font-weight: bold;
+    color: var(--text-color);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.growth-bar:hover::after {
+    opacity: 1;
+}
+
+.chart-labels {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 10px;
+    font-size: 0.8rem;
+    color: var(--text-color);
+}
+
+.activity-pie {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.activity-chart {
+    width: 200px;
+    height: 200px;
+    border-radius: 50%;
+    position: relative;
+    background: conic-gradient(
+        var(--success-color) 0% 30%,
+        var(--warning-color) 30% 60%,
+        var(--danger-color) 60% 100%
+    );
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.activity-chart::before {
+    content: '';
+    width: 120px;
+    height: 120px;
+    background: white;
+    border-radius: 50%;
+    position: absolute;
+}
+
+.activity-legend {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    background: var(--light-color);
+    border-radius: 8px;
+    transition: background 0.3s ease;
+}
+
+.legend-item:hover {
+    background: var(--secondary-color);
+}
+
+.legend-color {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    margin-right: 10px;
+}
+
+.user-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+}
+
+.user-table th,
+.user-table td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #eee;
+}
+
+.user-table th {
+    background: var(--light-color);
+    font-weight: 600;
+    color: var(--text-color);
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    letter-spacing: 0.5px;
+}
+
+.user-table tr:hover {
+    background: var(--secondary-color);
+}
+
+.user-badge {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    text-transform: uppercase;
+}
+
+.badge-verified { background: #e8f5e8; color: #2e7d32; }
+.badge-unverified { background: #fff3e0; color: #f57c00; }
+.badge-admin { background: #e3f2fd; color: #1976d2; }
+.badge-user { background: #f3e5f5; color: #7b1fa2; }
+
+.recent-trend {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    height: 120px;
+    margin-bottom: 15px;
+}
+
+.trend-bar {
+    flex: 1;
+    background: linear-gradient(to top, var(--info-color), var(--primary-color));
+    margin: 0 3px;
+    border-radius: 4px 4px 0 0;
+    position: relative;
+    min-height: 5px;
+    transition: all 0.3s ease;
+}
+
+.trend-bar:hover {
+    background: linear-gradient(to top, var(--success-color), var(--warning-color));
+}
+
+.trend-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8rem;
+    color: var(--text-color);
+    margin-top: 8px;
+}
+
+.permission-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+}
+
+.permission-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    background: var(--light-color);
+    border-radius: 10px;
+    transition: all 0.3s ease;
+}
+
+.permission-item:hover {
+    background: var(--secondary-color);
+    transform: translateX(5px);
+}
+
+.permission-name {
+    font-weight: 500;
+    color: var(--text-color);
+}
+
+.permission-count {
+    background: var(--primary-color);
+    color: white;
+    padding: 6px 12px;
+    border-radius: 15px;
+    font-weight: bold;
+}
+
+.latest-users {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 15px;
+}
+
+.user-card {
+    background: var(--light-color);
+    padding: 15px;
+    border-radius: 10px;
+    transition: all 0.3s ease;
+    border-left: 4px solid var(--primary-color);
+}
+
+.user-card:hover {
+    background: var(--secondary-color);
+    transform: translateY(-3px);
+}
+
+.user-name {
+    font-weight: 600;
+    color: var(--text-color);
+    margin-bottom: 5px;
+}
+
+.user-info {
+    font-size: 0.9rem;
+    color: #718096;
+}
+
+.error-message {
+    background: #ffebee;
+    color: #c62828;
+    padding: 20px;
+    border-radius: var(--border-radius);
+    border-left: 5px solid #f44336;
+    margin-bottom: 20px;
+}
+
+.refresh-btn {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 60px;
+    height: 60px;
+    font-size: 1.5rem;
+    cursor: pointer;
+    box-shadow: var(--shadow);
+    transition: all 0.3s ease;
+    z-index: 1000;
+}
+
+.refresh-btn:hover {
+    transform: scale(1.1) rotate(180deg);
+    background: var(--success-color);
+}
+
+@media (max-width: 768px) {
+    .analytics-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .stats-overview {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .analytics-header h1 {
+        font-size: 2.2rem;
+    }
+    
+    .analytics-card {
+        padding: 20px;
+    }
+}
+
+.fade-in {
+    animation: fadeIn 0.6s ease-in;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="analytics-container">
+    <div class="analytics-header">
+        <h1>👥 用户分析仪表板</h1>
+        <div class="subtitle">📊 深度洞察用户行为与趋势</div>
+        <div class="date">📅 {{ current_date|date:"Y年m月d日" }}</div>
+    </div>
+
+    {% if error %}
+    <div class="error-message">
+        <strong>⚠️ 错误:</strong> {{ error }}
+    </div>
+    {% endif %}
+
+    <!-- 概览统计 -->
+    <div class="stats-overview">
+        <div class="overview-card">
+            <span class="icon">👥</span>
+            <div class="number">{{ user_stats.total }}</div>
+            <div class="label">总用户数</div>
+        </div>
+        <div class="overview-card">
+            <span class="icon">✅</span>
+            <div class="number">{{ user_stats.active }}</div>
+            <div class="label">活跃用户</div>
+        </div>
+        <div class="overview-card">
+            <span class="icon">🎯</span>
+            <div class="number">{{ user_stats.verified }}</div>
+            <div class="label">已验证用户</div>
+        </div>
+        <div class="overview-card">
+            <span class="icon">📈</span>
+            <div class="number">{{ user_stats.today_joined }}</div>
+            <div class="label">今日新增</div>
+        </div>
+        <div class="overview-card">
+            <span class="icon">📊</span>
+            <div class="number">{{ user_stats.this_week }}</div>
+            <div class="label">本周新增</div>
+        </div>
+        <div class="overview-card">
+            <span class="icon">📆</span>
+            <div class="number">{{ user_stats.this_month }}</div>
+            <div class="label">本月新增</div>
+        </div>
+    </div>
+
+    <div class="analytics-grid">
+        <!-- 用户增长趋势 -->
+        <div class="analytics-card">
+            <h3><span class="icon">📈</span>用户增长趋势 (最近12个月)</h3>
+            <div class="growth-chart">
+                {% for month in growth_data %}
+                <div class="growth-bar" 
+                     style="height: {% if month.count > 0 %}{% widthratio month.count 10 100 %}%{% else %}5%{% endif %};"
+                     data-count="{{ month.count }}"
+                     title="{{ month.month }}: {{ month.count }}人">
+                </div>
+                {% endfor %}
+            </div>
+            <div class="chart-labels">
+                {% for month in growth_data %}
+                <span>{{ month.month_name }}</span>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- 用户活跃度分析 -->
+        <div class="analytics-card">
+            <h3><span class="icon">⚡</span>用户活跃度分析</h3>
+            <div class="activity-pie">
+                <div class="activity-chart"></div>
+            </div>
+            <div class="activity-legend">
+                {% for level in activity_levels %}
+                <div class="legend-item">
+                    <div class="legend-color" style="background: {{ level.color }};"></div>
+                    <span>{{ level.level }}: {{ level.count }}人</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- 最近7天注册趋势 -->
+        <div class="analytics-card">
+            <h3><span class="icon">🕒</span>最近7天注册趋势</h3>
+            <div class="recent-trend">
+                {% for day in recent_users %}
+                <div class="trend-bar" 
+                     style="height: {% if day.count > 0 %}{% widthratio day.count 5 100 %}%{% else %}10%{% endif %};"
+                     title="{{ day.date }}: {{ day.count }}人">
+                </div>
+                {% endfor %}
+            </div>
+            <div class="trend-labels">
+                {% for day in recent_users %}
+                <span>{{ day.date }}</span>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- 用户权限统计 -->
+        <div class="analytics-card">
+            <h3><span class="icon">🔐</span>用户权限统计</h3>
+            <div class="permission-grid">
+                <div class="permission-item">
+                    <span class="permission-name">用户管理</span>
+                    <span class="permission-count">{{ permission_stats.manage_users }}</span>
+                </div>
+                <div class="permission-item">
+                    <span class="permission-name">标签管理</span>
+                    <span class="permission-count">{{ permission_stats.manage_tags }}</span>
+                </div>
+                <div class="permission-item">
+                    <span class="permission-name">模板管理</span>
+                    <span class="permission-count">{{ permission_stats.manage_templates }}</span>
+                </div>
+                <div class="permission-item">
+                    <span class="permission-name">数据统计</span>
+                    <span class="permission-count">{{ permission_stats.view_statistics }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 用户角色分布 -->
+    {% if role_distribution %}
+    <div class="analytics-card" style="margin-bottom: 25px;">
+        <h3><span class="icon">🎭</span>用户角色分布</h3>
+        <div class="permission-grid">
+            {% for role in role_distribution %}
+            <div class="permission-item">
+                <span class="permission-name">{{ role.role }}</span>
+                <span class="permission-count">{{ role.count }} ({{ role.percentage }}%)</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 用户内容统计表格 -->
+    {% if content_stats %}
+    <div class="analytics-card" style="margin-bottom: 25px;">
+        <h3><span class="icon">📝</span>用户内容统计 (前15名)</h3>
+        <table class="user-table">
+            <thead>
+                <tr>
+                    <th>用户名</th>
+                    <th>角色</th>
+                    <th>图片数</th>
+                    <th>相册数</th>
+                    <th>评论数</th>
+                    <th>注册日期</th>
+                    <th>状态</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in content_stats %}
+                <tr>
+                    <td><strong>{{ user.username }}</strong></td>
+                    <td><span class="user-badge badge-{{ user.role|lower }}">{{ user.role }}</span></td>
+                    <td>{{ user.images }}</td>
+                    <td>{{ user.albums }}</td>
+                    <td>{{ user.comments }}</td>
+                    <td>{{ user.join_date|date:"m-d" }}</td>
+                    <td>
+                        <span class="user-badge {% if user.is_verified %}badge-verified{% else %}badge-unverified{% endif %}">
+                            {% if user.is_verified %}已验证{% else %}未验证{% endif %}
+                        </span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    <!-- 最新注册用户 -->
+    {% if latest_users %}
+    <div class="analytics-card">
+        <h3><span class="icon">🆕</span>最新注册用户</h3>
+        <div class="latest-users">
+            {% for user in latest_users %}
+            <div class="user-card">
+                <div class="user-name">{{ user.username }}</div>
+                <div class="user-info">
+                    <div>{{ user.date_joined|date:"m-d H:i" }}</div>
+                    <div>
+                        <span class="user-badge badge-{{ user.role }}">{{ user.get_role_display }}</span>
+                        {% if user.is_verified %}
+                        <span class="user-badge badge-verified">已验证</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<button class="refresh-btn" onclick="location.reload();" title="刷新数据">
+    🔄
+</button>
+
+<script>
+// 页面加载动画
+document.addEventListener('DOMContentLoaded', function() {
+    const cards = document.querySelectorAll('.overview-card, .analytics-card');
+    cards.forEach((card, index) => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(30px)';
+        setTimeout(() => {
+            card.style.transition = 'all 0.6s ease';
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+            card.classList.add('fade-in');
+        }, index * 150);
+    });
+    
+    // 增长条动画
+    setTimeout(() => {
+        const growthBars = document.querySelectorAll('.growth-bar, .trend-bar');
+        growthBars.forEach((bar, index) => {
+            const height = bar.style.height;
+            bar.style.height = '0';
+            setTimeout(() => {
+                bar.style.transition = 'height 0.8s ease';
+                bar.style.height = height;
+            }, index * 100);
+        });
+    }, 1000);
+});
+
+// 自动刷新数据 (每10分钟)
+setInterval(() => {
+    location.reload();
+}, 600000);
+</script>
+{% endblock %} 

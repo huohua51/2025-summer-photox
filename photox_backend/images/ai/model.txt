@@ -1,0 +1,4 @@
+1:"qwen2.5-vl-7b-instruct"
+2:"doubao-1.5-vision-pro"
+3:"qwen-vl-max-2025-01-25"
+4:"qwen2.5-omni-7b"

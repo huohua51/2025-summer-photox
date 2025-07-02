@@ -1,0 +1,132 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls static %}
+
+{% block title %}相册管理{% endblock %}
+
+{% block extrahead %}
+<style>
+.album-stats {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 5px;
+    padding: 15px;
+    margin-bottom: 20px;
+}
+.stat-item {
+    display: inline-block;
+    margin-right: 20px;
+    text-align: center;
+}
+.stat-number {
+    font-size: 24px;
+    font-weight: bold;
+    color: #007cba;
+}
+.album-item {
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    padding: 15px;
+    margin-bottom: 15px;
+    background: #fff;
+}
+.album-title {
+    font-size: 18px;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+.album-meta {
+    color: #666;
+    font-size: 14px;
+}
+.search-form {
+    margin-bottom: 20px;
+}
+.filters {
+    margin-bottom: 15px;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<h1>相册管理</h1>
+
+<!-- 统计数据 -->
+<div class="album-stats">
+    <div class="stat-item">
+        <div class="stat-number">{{ stats.total_albums }}</div>
+        <div>总相册数</div>
+    </div>
+    <div class="stat-item">
+        <div class="stat-number">{{ stats.public_albums }}</div>
+        <div>公开相册</div>
+    </div>
+    <div class="stat-item">
+        <div class="stat-number">{{ stats.private_albums }}</div>
+        <div>私人相册</div>
+    </div>
+    <div class="stat-item">
+        <div class="stat-number">{{ stats.empty_albums }}</div>
+        <div>空相册</div>
+    </div>
+</div>
+
+<!-- 搜索和过滤 -->
+<form method="get" class="search-form">
+    <div class="filters">
+        <input type="text" name="search" value="{{ search_query }}" placeholder="搜索相册标题、描述或用户名" style="width: 300px; padding: 5px;">
+        <select name="is_public" style="padding: 5px;">
+            <option value="">所有状态</option>
+            <option value="true" {% if is_public == "true" %}selected{% endif %}>公开</option>
+            <option value="false" {% if is_public == "false" %}selected{% endif %}>私人</option>
+        </select>
+        <button type="submit" class="default">搜索</button>
+        <a href="{% url 'admin_dashboard:album_management' %}" class="button">清除过滤</a>
+    </div>
+</form>
+
+<!-- 相册列表 -->
+{% if page_obj %}
+    {% for album in page_obj %}
+    <div class="album-item">
+        <div class="album-title">
+            <a href="/admin/albums/album/{{ album.id }}/change/">{{ album.title }}</a>
+            {% if album.is_public %}
+                <span style="color: green;">[公开]</span>
+            {% else %}
+                <span style="color: red;">[私人]</span>
+            {% endif %}
+        </div>
+        <div class="album-meta">
+            <strong>创建者:</strong> {{ album.user.username }} |
+            <strong>创建时间:</strong> {{ album.created_at|date:"Y-m-d H:i" }} |
+            <strong>图片数量:</strong> {{ album.images.count }} |
+            <strong>描述:</strong> {{ album.description|default:"无描述" }}
+        </div>
+    </div>
+    {% endfor %}
+{% else %}
+    <p>没有找到相册。</p>
+{% endif %}
+
+<!-- 分页 -->
+{% if page_obj.has_other_pages %}
+<div class="pagination">
+    <span class="step-links">
+        {% if page_obj.has_previous %}
+            <a href="?page=1{% if search_query %}&search={{ search_query }}{% endif %}{% if is_public %}&is_public={{ is_public }}{% endif %}">&laquo; 首页</a>
+            <a href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if is_public %}&is_public={{ is_public }}{% endif %}">上一页</a>
+        {% endif %}
+
+        <span class="current">
+            第 {{ page_obj.number }} 页 / 共 {{ page_obj.paginator.num_pages }} 页
+        </span>
+
+        {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if is_public %}&is_public={{ is_public }}{% endif %}">下一页</a>
+            <a href="?page={{ page_obj.paginator.num_pages }}{% if search_query %}&search={{ search_query }}{% endif %}{% if is_public %}&is_public={{ is_public }}{% endif %}">末页 &raquo;</a>
+        {% endif %}
+    </span>
+</div>
+{% endif %}
+
+{% endblock %} 
