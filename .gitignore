@@ -1,14 +1,9 @@
-<<<<<<< HEAD
 # Python
-=======
-﻿# Python
->>>>>>> a6605e7d222b223c9b579215a5e09d115640ce86
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
-<<<<<<< HEAD
 build/
 develop-eggs/
 dist/
@@ -25,29 +20,6 @@ wheels/
 .installed.cfg
 *.egg
 MANIFEST
-
-# Django
-*.log
-local_settings.py
-db.sqlite3
-db.sqlite3-journal
-media/
-staticfiles/
-
-# Virtual environment
-venv/
-venv_win_bak/
-env/
-ENV/
-env.bak/
-venv.bak/
-
-# Node.js
-=======
-env/
-venv/
-ENV/
-.venv
 pip-log.txt
 pip-delete-this-directory.txt
 .tox/
@@ -66,20 +38,30 @@ coverage.xml
 *.pyc
 local_settings.py
 db.sqlite3
+db.sqlite3-journal
 media/
 staticfiles/
 
-# Node
->>>>>>> a6605e7d222b223c9b579215a5e09d115640ce86
+# Virtual environment
+venv/
+venv_win_bak/
+env/
+ENV/
+env.bak/
+venv.bak/
+.venv
+
+# Node.js
 node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-<<<<<<< HEAD
 .pnpm-debug.log*
+dist/
+.npm
+.eslintcache
 
 # Vue.js
-dist/
 .vuepress/dist
 
 # Environment variables
@@ -114,11 +96,9 @@ pids
 *.seed
 *.pid.lock
 
-# Coverage directory used by tools like istanbul
+# Coverage directory
 coverage/
 *.lcov
-
-# nyc test coverage
 .nyc_output
 
 # Dependency directories
@@ -126,12 +106,6 @@ jspm_packages/
 
 # TypeScript cache
 *.tsbuildinfo
-
-# Optional npm cache directory
-.npm
-
-# Optional eslint cache
-.eslintcache
 
 # Optional REPL history
 .node_repl_history
@@ -142,7 +116,7 @@ jspm_packages/
 # Yarn Integrity file
 .yarn-integrity
 
-# parcel-bundler cache (https://parceljs.org/)
+# parcel-bundler cache
 .cache
 .parcel-cache
 
@@ -151,7 +125,6 @@ jspm_packages/
 
 # Nuxt.js build / generate output
 .nuxt
-dist
 
 # Storybook build outputs
 .out
@@ -163,55 +136,10 @@ config.json
 
 # Backup files
 *.bak
-*.tmp
 
-# 忽略 Python 编译文件
-*.pyc
-*.pyo
-*.pyd
-
-# 忽略虚拟环境
-venv/
-venv_win_bak/
-env/
-
-# 忽略数据库文件
-*.sqlite3
-*.db
-
-# 忽略媒体文件
+# 媒体文件
 media/processed/
 media/avatars/
 
-# 忽略日志文件
-*.log
-
-# 忽略IDE配置
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# 忽略操作系统文件
-.DS_Store
-Thumbs.db
-
-# 忽略依赖包
-node_modules/ 
-=======
-dist/
-.npm
-.eslintcache
-
-# IDE
-.idea/
-.vscode/
-*.swp
-*.swo
-*~
-.DS_Store
-
-# Environment
-.env
-.env.local
->>>>>>> a6605e7d222b223c9b579215a5e09d115640ce86
+# 数据库备份
+*.db
