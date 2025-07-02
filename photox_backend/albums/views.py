@@ -1,3 +1,8 @@
+"""
+相册管理模块 - 视图控制器
+作者: x1x8j (1101219195@qq.com)
+功能: 提供相册的CRUD操作接口和图片管理功能
+"""
 from django.shortcuts import render
 from rest_framework import generics, status
 from rest_framework.response import Response
@@ -12,6 +17,8 @@ from images.models import Image
 class AlbumListView(generics.ListCreateAPIView):
     """
     获取相册列表和创建新相册
+    - GET: 获取当前用户的所有相册
+    - POST: 创建新相册
     """
     permission_classes = [IsAuthenticated]
     
@@ -48,6 +55,9 @@ class AlbumListView(generics.ListCreateAPIView):
 class AlbumDetailView(generics.RetrieveUpdateDestroyAPIView):
     """
     获取、更新和删除单个相册
+    - GET: 获取相册详情
+    - PUT/PATCH: 更新相册信息
+    - DELETE: 删除相册
     """
     permission_classes = [IsAuthenticated]
     serializer_class = AlbumSerializer

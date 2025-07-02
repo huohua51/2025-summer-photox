@@ -1,13 +1,18 @@
-from django.db import models
-
-# Create your models here.
-# albums/models.py
+"""
+相册管理模块 - 数据模型
+作者: x1x8j (1101219195@qq.com)
+功能: 提供用户相册的创建、管理和分享功能
+"""
 from django.db import models
 from django.conf import settings
 # 从 images app 导入 Image 模型
 from images.models import Image
 
 class Album(models.Model):
+    """
+    相册模型
+    用于管理用户创建的相册，支持将多张图片组织到一个相册中
+    """
     title = models.CharField(max_length=255, verbose_name="相册标题")
     description = models.TextField(blank=True, null=True, verbose_name="描述")
     user = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='albums', on_delete=models.CASCADE, verbose_name="所属用户")
