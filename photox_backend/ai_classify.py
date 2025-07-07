@@ -3,6 +3,8 @@ import base64
 from PIL import Image
 import io
 
+# 2025-07-07: 增加无影响注释，格式微调
+
 
 def process_image(image_path, max_size=2048, quality=85):
     """图片预处理核心函数"""
