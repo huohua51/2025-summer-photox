@@ -36,6 +36,12 @@ from .tasks import ai_image_analysis
 from .ai.ai_classify import image_classification
 from .ai.color import extract_colors_with_colorthief
 from .ai.description import generate_image_description
+from .ai.location import ai_recognize_location_from_image
+from .ai.save import upload_and_set_metadata
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from utils.sensitive_words import sensitive_filter
+
 logger = logging.getLogger(__name__)
 
 def welcome_view(request):
@@ -171,9 +177,17 @@ class ImageUploadView(APIView):
                     # 将标签列表转换为JSON字符串
                     tags_json = json.dumps(tags, ensure_ascii=False)
                     
+                    # 检查标题是否包含敏感词
+                    title = serializer.validated_data.get('title', '')
+                    if title:
+                        title_check = sensitive_filter.check_text(title)
+                        if title_check['has_sensitive']:
+                            logger.warning(f"图片标题包含敏感词: {title_check['sensitive_words']}")
+                            title = title_check['filtered_text']
+                    
                     image = Image.objects.create(
                         image_url=image_url,
-                        title=serializer.validated_data.get('title', ''),
+                        title=title,
                         tags=tags_json,  # 存储为JSON字符串
                         user=request.user,  # 上传者为当前认证的用户
                         is_public=serializer.validated_data.get('is_public', False),
@@ -418,32 +432,44 @@ class ImageListView(ListAPIView):
 
 
     def get_queryset(self):
-        # 获取查询参数
         is_public = self.request.query_params.get('is_public', None)
-        user_id = self.request.query_params.get('user', None)  # 兼容 user_id/user
+        is_approved = self.request.query_params.get('is_approved', None)
+        user_id = self.request.query_params.get('user', None)
         if user_id is None:
             user_id = self.request.query_params.get('user_id', None)
         
-        queryset = Image.objects.all()
-        # 按用户过滤
+        # 如果指定了用户ID
         if user_id is not None:
-            queryset = queryset.filter(user_id=user_id)
-            if str(user_id) != str(getattr(self.request.user, 'id', None)):
+            # 如果是查看自己的图片，显示所有图片（包括未审核的）
+            if str(user_id) == str(getattr(self.request.user, 'id', None)):
+                queryset = Image.objects.filter(user_id=user_id)
+            else:
+                # 查看其他用户的图片，只显示审核通过的
+                queryset = Image.objects.filter(user_id=user_id, is_approved=True)
+                # 如果没指定is_public参数，默认只显示公开图片
                 if is_public is None:
                     queryset = queryset.filter(is_public=True)
-        if user_id is None:
-            if is_public is not None:
-                is_public = str(is_public).lower() == 'true'
-                queryset = queryset.filter(is_public=is_public)
-            else:
-                if self.request.user.is_authenticated:
-                    queryset = queryset.filter(user=self.request.user)
-                else:
-                    queryset = Image.objects.none()
         else:
-            if is_public is not None:
-                is_public = str(is_public).lower() == 'true'
-                queryset = queryset.filter(is_public=is_public)
+            # 没有指定用户ID
+            if self.request.user.is_authenticated:
+                # 如果请求了公开图片（is_public=true），则返回所有公开且审核通过的图片
+                if is_public is not None and str(is_public).lower() == 'true':
+                    queryset = Image.objects.filter(is_public=True, is_approved=True)
+                else:
+                    queryset = Image.objects.filter(user=self.request.user)
+            else:
+                # 匿名用户，返回所有公开且审核通过的图片
+                queryset = Image.objects.filter(is_public=True, is_approved=True)
+        
+        # 处理is_public过滤
+        if is_public is not None:
+            is_public = str(is_public).lower() == 'true'
+            queryset = queryset.filter(is_public=is_public)
+        
+        # 处理is_approved过滤
+        if is_approved is not None:
+            is_approved = str(is_approved).lower() == 'true'
+            queryset = queryset.filter(is_approved=is_approved)
 
         category_id = self.request.query_params.get('category_id')
         if category_id:
@@ -452,6 +478,22 @@ class ImageListView(ListAPIView):
         exclude_id = self.request.query_params.get('exclude_id')
         if exclude_id:
             queryset = queryset.exclude(id=exclude_id)
+
+        # 按位置信息过滤
+        has_location = self.request.query_params.get('has_location')
+        if has_location is not None:
+            has_location = str(has_location).lower() == 'true'
+            if has_location:
+                # 只返回有位置信息的图片
+                queryset = queryset.filter(
+                    latitude__isnull=False,
+                    longitude__isnull=False
+                )
+            else:
+                # 只返回没有位置信息的图片
+                queryset = queryset.filter(
+                    models.Q(latitude__isnull=True) | models.Q(longitude__isnull=True)
+                )
 
         # ====== 热门推荐逻辑：用Subquery统计点赞数并降序排序 ======
         order_by = self.request.query_params.get('order_by')
@@ -499,6 +541,8 @@ class ImageDetailView(APIView):
     def get(self, request, image_id):
         try:
             image = Image.objects.get(id=image_id)
+            if not image.is_approved and image.user != request.user:
+                raise Image.DoesNotExist
         except Image.DoesNotExist:
             return Response({"code": 1, "message": "Image not found"}, status=status.HTTP_404_NOT_FOUND)
 
@@ -517,11 +561,20 @@ class ImageDetailView(APIView):
 
         title = request.data.get('title', None)
         is_public = request.data.get('is_public', None)
+        latitude = request.data.get('latitude', None)
+        longitude = request.data.get('longitude', None)
+        location_name = request.data.get('location_name', None)
 
         if title:
             image.title = title
         if is_public is not None:
             image.is_public = is_public
+        if latitude is not None:
+            image.latitude = latitude
+        if longitude is not None:
+            image.longitude = longitude
+        if location_name is not None:
+            image.location_name = location_name
 
         image.save()
 
@@ -569,8 +622,8 @@ class ImageFeedView(ListAPIView):
         
         # 获取关注用户的公开图片 + 自己的所有图片
         queryset = Image.objects.filter(
-            models.Q(user__in=following_users, is_public=True) |  # 关注用户的公开图片
-            models.Q(user=user)  # 自己的所有图片
+            models.Q(user__in=following_users, is_public=True, is_approved=True) |  # 关注用户的公开且审核通过的图片
+            models.Q(user=user, is_approved=True)  # 自己的审核通过的图片
         ).select_related('user').prefetch_related('user__followers', 'user__following')
         
         # 按创建时间倒序排列
@@ -603,13 +656,12 @@ class ImageAIAnalysisView(APIView):
             from description import generate_image_description
             
             # 获取API密钥（建议从环境变量或配置文件中获取）
-            api_key = "sk-ff8f03a8cfbc03d7df75b7ddb6b1fb7f0bfc8116e02986306865aa9149741301"
+            api_key = "sk-3658ae5ea3284ff4865227db05f4a214"
             
             # 调用AI分析
             result = generate_image_description(
                 image_path=image.image_url,  # 使用图片URL
-                api_key=api_key,
-                model_id=3  # 使用模型ID 3
+                api_key=api_key
             )
             
             return Response({
@@ -638,7 +690,7 @@ def ai_description_view(request, image_id):
     # 如果已分析过，直接返回
     if image.ai_description:
         return Response({"description": image.ai_description})
-    api_key = "sk-ff8f03a8cfbc03d7df75b7ddb6b1fb7f0bfc8116e02986306865aa9149741301"
+    api_key = "sk-3658ae5ea3284ff4865227db05f4a214"
     import os
     import tempfile
     import requests
@@ -649,7 +701,7 @@ def ai_description_view(request, image_id):
         tmp.flush()
         tmp_path = tmp.name
     try:
-        result = generate_image_description(tmp_path, api_key, 3)
+        result = generate_image_description(tmp_path, api_key)
         result = result['description']
         image.ai_description = result
         image.save()
@@ -1069,3 +1121,38 @@ class DeleteProcessedImageView(APIView):
                 return Response({'error': str(e)}, status=500)
         else:
             return Response({'error': 'file not found'}, status=404)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def ai_recognize_location(request, image_id):
+    """
+    AI识别图片地点，返回经纬度和地点名
+    """
+    try:
+        image = Image.objects.get(id=image_id)
+    except Image.DoesNotExist:
+        return Response({"code": 1, "message": "图片不存在"}, status=404)
+
+    import tempfile, requests, os
+    with tempfile.NamedTemporaryFile(suffix='.jpg', delete=False) as tmp:
+        resp = requests.get(image.image_url)
+        tmp.write(resp.content)
+        tmp.flush()
+        tmp_path = tmp.name
+
+    try:
+        api_key ="sk-3658ae5ea3284ff4865227db05f4a214"
+        result = ai_recognize_location_from_image(tmp_path, api_key)
+        if result and "lat" in result and "lng" in result and result["lat"] and result["lng"]:
+            return Response({
+                "code": 0,
+                "lat": result["lat"],
+                "lng": result["lng"],
+                "name": result.get("name", "")
+            })
+        else:
+            return Response({"code": 2, "message": "AI无法识别图片地点"}, status=200)
+    except Exception as e:
+        return Response({"code": 3, "message": f"AI识别失败: {str(e)}"}, status=500)
+    finally:
+        os.remove(tmp_path)

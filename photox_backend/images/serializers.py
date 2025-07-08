@@ -68,12 +68,7 @@ class ImageSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Image
-        fields = [
-            'id', 'image_url', 'title', 'tags', 'tags_list',
-            'user', 'created_at', 'is_public',
-            'category_id', 'category', 'colors', 'like_count', 
-            'is_following_author', 'is_liked'
-        ]
+        fields = '__all__'  # 包含is_approved字段
     
     def get_tags_list(self, obj):
         """获取标签列表"""

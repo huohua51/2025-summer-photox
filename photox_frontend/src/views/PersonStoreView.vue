@@ -121,6 +121,11 @@
             
             <img :src="image.thumbnail" />
             
+            <!-- 待审核状态标识 -->
+            <div v-if="!image.is_approved" class="pending-approval-badge">
+              待审核
+            </div>
+            
             <!-- 非选择模式下的操作菜单 -->
             <ImageItemMenu 
               v-if="!isSelectionMode"
@@ -212,17 +217,18 @@ watch([searchKeyword, selectedCategory], () => {
   fetchImages()
 })
 
-// 获取图片列表
-const fetchImages = async () => {
-  loading.value = true
-  error.value = null
-  try {
-    // 获取所有图片，不进行分页
-    const response = await imageService.getUserImages({
-      category: selectedCategory.value === '全部' ? undefined : selectedCategory.value,
-      search: searchKeyword.value || undefined,
-      page_size: 1000 // 设置一个足够大的数字以获取所有图片
-    })
+  // 获取图片列表
+  const fetchImages = async () => {
+    loading.value = true
+    error.value = null
+    try {
+      // 获取当前用户的所有图片，包括待审核的
+      const response = await imageService.getUserImages({
+        user: JSON.parse(localStorage.getItem('userInfo'))?.id, // 传递当前用户ID
+        category: selectedCategory.value === '全部' ? undefined : selectedCategory.value,
+        search: searchKeyword.value || undefined,
+        page_size: 1000 // 设置一个足够大的数字以获取所有图片
+      })
 
     if (!response) {
       throw new Error('获取图片列表失败：响应为空')
@@ -240,6 +246,7 @@ const fetchImages = async () => {
       thumbnail: image.image_url,
       title: image.title || '未命名',
       is_public: image.is_public || false,
+      is_approved: image.is_approved || false, // 添加审核状态
       image_url: image.image_url,
       category: image.category || '未分类',
       tags: parseTags(image.tags),
@@ -974,7 +981,8 @@ const isAllSelected = computed(() => {
 
 .Subscribe-btn:hover {
   background-color: var(--primary-color);
-  opacity: 0.9;
+  color: var(--primary-color);
+  opacity: 1;
 }
 
 .arrow {
@@ -1178,6 +1186,7 @@ const isAllSelected = computed(() => {
   font-size: 14px;
   font-weight: 500;
   transition: all 0.3s ease;
+  color: var(--text-color);
 }
 
 .batch-btn:disabled {
@@ -1196,8 +1205,7 @@ const isAllSelected = computed(() => {
 }
 
 .delete-btn {
-  background-color: var(--error-color);
-  color: white;
+  background-color: rgba(246, 68, 37, 0.958);
 }
 
 .delete-btn:hover:not(:disabled) {
@@ -1274,6 +1282,21 @@ const isAllSelected = computed(() => {
   height: 18px;
   cursor: pointer;
   accent-color: var(--primary-color);
+}
+
+/* 待审核标识样式 */
+.pending-approval-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background-color: #ff9800;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  z-index: 5;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 /* 移动端适配 */

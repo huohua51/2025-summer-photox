@@ -3,12 +3,14 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from utils.views import SensitiveWordsCheckView, SensitiveWordsManagementView
 from django.views.generic.base import RedirectView # 用于重定向
 
 # --- Swagger ---
 from rest_framework import permissions
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
+from images.views import ai_recognize_location
 
 schema_view = get_schema_view(
     openapi.Info(
@@ -46,6 +48,9 @@ urlpatterns = [
 
     # 社区相关 -> 指向 community 应用的 urls.py
     path('api/v1/community/', include('community.urls', namespace='community')),
+
+
+   
     # --- API v1 URLs End ---
 
 
@@ -60,6 +65,11 @@ urlpatterns = [
 
     # Admin Dashboard 路由
     path('admin-dashboard/', include('users.admin_urls')),
+    
+    # 敏感词API路由
+    path('api/sensitive-words/check/', SensitiveWordsCheckView.as_view(), name='sensitive_words_check'),
+    path('api/sensitive-words/', SensitiveWordsManagementView.as_view(), name='sensitive_words_management'),
+    path('api/sensitive-words/<str:word>/', SensitiveWordsManagementView.as_view(), name='sensitive_words_delete'),
 ]+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 # 开发环境下，允许 Django 托管用户上传的媒体文件

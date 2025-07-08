@@ -610,7 +610,6 @@ const likedByMe = ref(false)
 const comments = ref([])
 const newComment = ref('')
 
-// 获取点赞状态和数量（真实API）
 async function fetchLikeStatus() {
   if (!image.value) return
   try {
@@ -629,7 +628,6 @@ async function fetchLikeStatus() {
   }
 }
 
-// 切换点赞（真实API）
 async function toggleLike() {
   if (!image.value) return
 
@@ -671,12 +669,14 @@ async function fetchComments() {
       time: formatTime(c.created_at),
       likeCount: c.like_count || 0,
       likedByMe: c.is_liked || false,
+      is_approved: c.is_approved || false, // 添加审核状态
       replies: (c.replies || []).map(r => ({
         ...r,
         author: r.user?.username || '匿名',
         time: formatTime(r.created_at),
         likeCount: r.like_count || 0,
-        likedByMe: r.is_liked || false
+        likedByMe: r.is_liked || false,
+        is_approved: r.is_approved || false // 添加回复的审核状态
       }))
     }))
   } catch (e) {
@@ -847,7 +847,11 @@ const allImages = ref([])
 // 拉取全部图片
 const fetchAllImages = async () => {
   try {
-    const response = await apiService.images.getList({ is_public: true, page_size: 1000 })
+    const response = await apiService.images.getList({ 
+      is_public: true, 
+      is_approved: true, // 只获取审核通过的图片
+      page_size: 1000 
+    })
     allImages.value = response.results || response.data?.results || []
   } catch (e) {
     allImages.value = []

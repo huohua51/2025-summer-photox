@@ -7,6 +7,7 @@ import logging
 from tags.models import Tag
 from tags.serializers import TagSerializer, TagImportSerializer
 
+
 logger = logging.getLogger(__name__)
 
 

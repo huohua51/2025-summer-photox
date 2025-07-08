@@ -12,10 +12,11 @@ class UserSerializer(serializers.ModelSerializer):
     is_following = serializers.SerializerMethodField()
     follower_count = serializers.SerializerMethodField()
     following_count = serializers.SerializerMethodField()
+    avatar = serializers.SerializerMethodField()
     
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'date_joined', 'is_following', 'follower_count', 'following_count']
+        fields = ['id', 'username', 'email', 'date_joined', 'is_following', 'follower_count', 'following_count', 'avatar']
         ref_name = 'CommunityUser'
         
     def get_is_following(self, obj):
@@ -29,6 +30,15 @@ class UserSerializer(serializers.ModelSerializer):
     
     def get_following_count(self, obj):
         return obj.following.count()
+    
+    def get_avatar(self, obj):
+        request = self.context.get('request', None)
+        if obj.avatar:
+            if request is not None:
+                return request.build_absolute_uri(obj.avatar.url)
+            else:
+                return obj.avatar.url
+        return None
 
 
 class CommentSerializer(serializers.ModelSerializer):
@@ -42,7 +52,7 @@ class CommentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Comment
         fields = ['id', 'user', 'album', 'image', 'content', 'parent', 'created_at', 'updated_at', 
-                 'reply_count', 'like_count', 'is_liked', 'replies']
+                 'reply_count', 'like_count', 'is_liked', 'replies', 'is_approved']
         read_only_fields = ['created_at', 'updated_at']
     
     def validate(self, data):

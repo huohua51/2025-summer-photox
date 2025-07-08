@@ -152,6 +152,7 @@ const fetchImages = async (reset = true) => {
   try {
     const params = {
       is_public: true,
+      is_approved: true, // 只获取审核通过的图片
       page: currentPage.value,
       page_size: 20
     }

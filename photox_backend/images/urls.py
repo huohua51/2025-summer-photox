@@ -1,11 +1,12 @@
 app_name = 'images'
 
 from django.urls import path
+
 from .views import (
     ImageUploadView, ImageListView, ImageDetailView, ImageFeedView, 
     ImageAIAnalysisView, ai_description_view, ImageTagsView,
     ImageStyleAnalysisView, ImageRecommendationView, AIProcessView,
-    AIProcessLocalView, DeleteProcessedImageView, BatchImageUploadView
+    AIProcessLocalView, DeleteProcessedImageView, BatchImageUploadView,ai_recognize_location
 )
 
 urlpatterns = [
@@ -22,6 +23,7 @@ urlpatterns = [
     path('<int:image_id>/ai-process/', AIProcessView.as_view(), name='image-ai-process'),
     path('ai-process-local/', AIProcessLocalView.as_view(), name='image-ai-process-local'),
     path('delete-processed/', DeleteProcessedImageView.as_view(), name='delete-processed-image'),
+    path('<int:image_id>/ai_recognize_location/', ai_recognize_location),
 ]
 
 

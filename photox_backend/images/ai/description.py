@@ -2,18 +2,11 @@ from .ai_classify import load_model_map, process_image, logger
 import base64
 import requests
 
-def generate_image_description(image_path, api_key, model_id=1, model_file="model.txt"):
+def generate_image_description(image_path, api_key):
     """生成图片的一句话描述"""
-    # 加载模型映射
-    model_map = load_model_map(model_file)
+    #
 
-    # 获取模型名称
-    if model_id in model_map:
-        model_name = model_map[model_id]
-        logger.info(f"使用模型: {model_name} (ID: {model_id})")
-    else:
-        model_name = model_map.get(1, "qwen2.5-vl-7b-instruct")
-        logger.warning(f"无效模型ID {model_id}，使用默认模型: {model_name}")
+    model_name="qwen-vl-max-latest"
 
     # 预处理图片
     image_bytes = process_image(image_path)
@@ -69,7 +62,7 @@ def generate_image_description(image_path, api_key, model_id=1, model_file="mode
     headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
     try:
         response = requests.post(
-            "https://api.qnaigc.com/v1/chat/completions",
+            "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
             json=payload,
             headers=headers,
             timeout=30

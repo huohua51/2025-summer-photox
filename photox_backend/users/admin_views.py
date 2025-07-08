@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
 from django.core.paginator import Paginator
 from django.db.models import Q, Count
@@ -9,10 +9,13 @@ from django.http import HttpResponse, JsonResponse
 from django.contrib.admin.views.decorators import staff_member_required
 from django.utils import timezone
 from datetime import timedelta
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
 
 from images.models import Image
 from albums.models import Album
 from community.models import Comment, Like, Follow, Notification
+from utils.sensitive_words import sensitive_filter
 
 def tag_management(request):
     return HttpResponse("标签管理后台页面")
@@ -114,6 +117,8 @@ def admin_dashboard(request):
             'public_albums': public_albums,
             'deleted_comments': deleted_comments,
             'orphaned_images': orphaned_images,
+            'pending_images': Image.objects.filter(is_approved=False).count(),
+            'pending_comments': Comment.objects.filter(is_approved=False).count(),
         },
         'user_roles': list(user_roles),
         'active_users': active_users,
@@ -339,15 +344,22 @@ def user_analytics(request):
             'view_statistics': CustomUser.objects.filter(can_view_statistics=True).count(),
         }
         
-        # 用户内容统计
-        content_stats = []
-        for user in CustomUser.objects.annotate(
+        # 用户内容统计 - 添加分页
+        users_with_content = CustomUser.objects.annotate(
             images_count=Count('images'),
             albums_count=Count('albums'),
             comments_count=Count('comment', filter=Q(comment__is_deleted=False))
         ).filter(
             Q(images_count__gt=0) | Q(albums_count__gt=0) | Q(comments_count__gt=0)
-        ).order_by('-images_count')[:15]:
+        ).order_by('-images_count')
+        
+        # 分页
+        content_page_number = request.GET.get('content_page', 1)
+        content_paginator = Paginator(users_with_content, 15)
+        content_page = content_paginator.get_page(content_page_number)
+        
+        content_stats = []
+        for user in content_page:
             content_stats.append({
                 'username': user.username,
                 'images': user.images_count,
@@ -370,6 +382,7 @@ def user_analytics(request):
             'recent_users': recent_users,
             'permission_stats': permission_stats,
             'content_stats': content_stats,
+            'content_page': content_page,
             'latest_users': latest_users,
             'current_date': today,
         }
@@ -400,19 +413,85 @@ def content_moderation(request):
         'users': CustomUser.objects.filter(is_verified=False).count(),
         'public_images': Image.objects.filter(is_public=True).count(),
         'public_albums': Album.objects.filter(is_public=True).count(),
-        'reported_comments': Comment.objects.filter(is_deleted=False).count(),  # 这里可以添加举报机制
+        'reported_comments': Comment.objects.filter(is_deleted=False).count(),
+        'pending_images': Image.objects.filter(is_approved=False).count(),
+        'pending_comments': Comment.objects.filter(is_approved=False).count(),
     }
     
-    # 最近的活动
+    # 最近的活动 - 添加分页
+    page_number = request.GET.get('page', 1)
+    items_per_page = 10
+    
+    # 新用户列表
+    new_users = CustomUser.objects.order_by('-date_joined')
+    user_paginator = Paginator(new_users, items_per_page)
+    user_page = user_paginator.get_page(page_number)
+    
+    # 新图片列表
+    new_images = Image.objects.order_by('-created_at')
+    image_paginator = Paginator(new_images, items_per_page)
+    image_page = image_paginator.get_page(page_number)
+    
+    # 新评论列表
+    new_comments = Comment.objects.filter(is_deleted=False).order_by('-created_at')
+    comment_paginator = Paginator(new_comments, items_per_page)
+    comment_page = comment_paginator.get_page(page_number)
+    
+    # 新增：待审核图片和评论
+    pending_images = Image.objects.filter(is_approved=False).order_by('-created_at')[:items_per_page]
+    pending_comments = Comment.objects.filter(is_approved=False).order_by('-created_at')[:items_per_page]
+    
     recent_activities = {
-        'new_users': CustomUser.objects.order_by('-date_joined')[:5],
-        'new_images': Image.objects.order_by('-created_at')[:5],
-        'new_comments': Comment.objects.filter(is_deleted=False).order_by('-created_at')[:5],
+        'new_users': user_page,
+        'new_images': image_page,
+        'new_comments': comment_page,
+        'pending_images': pending_images,
+        'pending_comments': pending_comments,
     }
+    
+    # 一键审核功能
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        if action == 'approve_images':
+            # 一键通过所有待审核图片
+            Image.objects.filter(is_approved=False).update(is_approved=True)
+        elif action == 'approve_comments':
+            # 一键通过所有待审核评论
+            Comment.objects.filter(is_approved=False).update(is_approved=True)
+        elif action in ['approve', 'reject']:
+            obj_type = request.POST.get('type')
+            obj_id = request.POST.get('id')
+            if obj_type == 'image':
+                try:
+                    img = Image.objects.get(id=obj_id)
+                    if action == 'approve':
+                        img.is_approved = True
+                        img.save()
+                        messages.success(request, '图片已通过审核')
+                    elif action == 'reject':
+                        img.delete()
+                        messages.success(request, '图片已拒绝并删除')
+                except Image.DoesNotExist:
+                    messages.error(request, '图片不存在')
+            elif obj_type == 'comment':
+                try:
+                    comment = Comment.objects.get(id=obj_id)
+                    if action == 'approve':
+                        comment.is_approved = True
+                        comment.save()
+                        messages.success(request, '评论已通过审核')
+                    elif action == 'reject':
+                        comment.delete()
+                        messages.success(request, '评论已拒绝并删除')
+                except Comment.DoesNotExist:
+                    messages.error(request, '评论不存在')
+        from django.shortcuts import redirect
+        return redirect(request.path)
     
     context = {
         'pending_verification': pending_verification,
         'recent_activities': recent_activities,
+        'current_page': page_number,
     }
     
     return render(request, 'admin/content_moderation.html', context)
@@ -614,17 +693,27 @@ def stats_dashboard(request):
             'empty': Album.objects.filter(images__isnull=True).count(),
         }
         
-        # 最活跃用户 (按图片数量)
-        active_users = CustomUser.objects.annotate(
+        # 最活跃用户 (按图片数量) - 添加分页
+        active_users_query = CustomUser.objects.annotate(
             images_count=Count('images'),
             albums_count=Count('albums')
-        ).filter(images_count__gt=0).order_by('-images_count')[:5]
+        ).filter(images_count__gt=0).order_by('-images_count')
         
-        # 最新用户
-        latest_users = CustomUser.objects.order_by('-date_joined')[:5]
+        active_page_number = request.GET.get('active_page', 1)
+        active_paginator = Paginator(active_users_query, 10)
+        active_users_page = active_paginator.get_page(active_page_number)
         
-        # 最新图片
-        latest_images = Image.objects.order_by('-created_at')[:5]
+        # 最新用户 - 添加分页
+        latest_users_query = CustomUser.objects.order_by('-date_joined')
+        latest_page_number = request.GET.get('latest_page', 1)
+        latest_paginator = Paginator(latest_users_query, 10)
+        latest_users_page = latest_paginator.get_page(latest_page_number)
+        
+        # 最新图片 - 添加分页
+        latest_images_query = Image.objects.order_by('-created_at')
+        images_page_number = request.GET.get('images_page', 1)
+        images_paginator = Paginator(latest_images_query, 10)
+        latest_images_page = images_paginator.get_page(images_page_number)
         
         context = {
             'today_stats': today_stats,
@@ -633,9 +722,9 @@ def stats_dashboard(request):
             'user_roles': user_roles,
             'image_stats': image_stats,
             'album_stats': album_stats,
-            'active_users': active_users,
-            'latest_users': latest_users,
-            'latest_images': latest_images,
+            'active_users': active_users_page,
+            'latest_users': latest_users_page,
+            'latest_images': latest_images_page,
             'current_date': today,
         }
         
@@ -649,11 +738,63 @@ def stats_dashboard(request):
             'user_roles': [],
             'image_stats': {'public': 0, 'private': 0},
             'album_stats': {'public': 0, 'private': 0, 'empty': 0},
-            'active_users': [],
-            'latest_users': [],
-            'latest_images': [],
+            'active_users': Paginator([], 10).get_page(1),
+            'latest_users': Paginator([], 10).get_page(1),
+            'latest_images': Paginator([], 10).get_page(1),
             'current_date': timezone.now().date(),
         }
     
     return render(request, 'admin/stats_dashboard.html', context)
+
+@login_required
+@user_passes_test(lambda u: u.is_staff)
+def sensitive_words_management(request):
+    """敏感词管理页面"""
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        
+        if action == 'add':
+            word = request.POST.get('word', '').strip()
+            if word:
+                sensitive_filter.add_sensitive_word(word)
+                sensitive_filter.save_sensitive_words()
+                messages.success(request, f'敏感词 "{word}" 已添加')
+            else:
+                messages.error(request, '敏感词不能为空')
+                
+        elif action == 'remove':
+            word = request.POST.get('word', '').strip()
+            if word:
+                sensitive_filter.remove_sensitive_word(word)
+                sensitive_filter.save_sensitive_words()
+                messages.success(request, f'敏感词 "{word}" 已移除')
+            else:
+                messages.error(request, '敏感词不能为空')
+                
+        elif action == 'test':
+            text = request.POST.get('text', '').strip()
+            if text:
+                result = sensitive_filter.check_text(text)
+                return JsonResponse({
+                    'has_sensitive': result['has_sensitive'],
+                    'sensitive_words': result['sensitive_words'],
+                    'filtered_text': result['filtered_text'],
+                    'replacement_count': result['replacement_count']
+                })
+            else:
+                return JsonResponse({'error': '测试文本不能为空'})
+    
+    # 获取所有敏感词
+    sensitive_words = sensitive_filter.get_sensitive_words()
+    
+    # 获取敏感词统计
+    total_words = len(sensitive_words)
+    
+    context = {
+        'sensitive_words': sensitive_words,
+        'total_words': total_words,
+        'page_title': '敏感词管理',
+    }
+    
+    return render(request, 'admin/sensitive_words_management.html', context)
 

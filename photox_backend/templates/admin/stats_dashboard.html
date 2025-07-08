@@ -380,6 +380,27 @@
                 <div class="user-stat">{{ user.images_count }} 图片 | {{ user.albums_count }} 相册</div>
             </div>
             {% endfor %}
+            
+            <!-- 分页控件 -->
+            {% if active_users.has_other_pages %}
+            <div class="pagination" style="margin-top: 1rem; text-align: center;">
+                <span class="step-links">
+                    {% if active_users.has_previous %}
+                        <a href="?active_page=1" class="btn btn-secondary" style="margin: 0 0.2rem;">&laquo; 首页</a>
+                        <a href="?active_page={{ active_users.previous_page_number }}" class="btn btn-secondary" style="margin: 0 0.2rem;">上一页</a>
+                    {% endif %}
+
+                    <span class="current" style="margin: 0 1rem; color: #4a5568;">
+                        第 {{ active_users.number }} 页 / 共 {{ active_users.paginator.num_pages }} 页
+                    </span>
+
+                    {% if active_users.has_next %}
+                        <a href="?active_page={{ active_users.next_page_number }}" class="btn btn-secondary" style="margin: 0 0.2rem;">下一页</a>
+                        <a href="?active_page={{ active_users.paginator.num_pages }}" class="btn btn-secondary" style="margin: 0 0.2rem;">末页 &raquo;</a>
+                    {% endif %}
+                </span>
+            </div>
+            {% endif %}
         </div>
         {% endif %}
 
@@ -393,6 +414,27 @@
                 <div class="user-stat">{{ user.date_joined|date:"m-d H:i" }}</div>
             </div>
             {% endfor %}
+            
+            <!-- 分页控件 -->
+            {% if latest_users.has_other_pages %}
+            <div class="pagination" style="margin-top: 1rem; text-align: center;">
+                <span class="step-links">
+                    {% if latest_users.has_previous %}
+                        <a href="?latest_page=1" class="btn btn-secondary" style="margin: 0 0.2rem;">&laquo; 首页</a>
+                        <a href="?latest_page={{ latest_users.previous_page_number }}" class="btn btn-secondary" style="margin: 0 0.2rem;">上一页</a>
+                    {% endif %}
+
+                    <span class="current" style="margin: 0 1rem; color: #4a5568;">
+                        第 {{ latest_users.number }} 页 / 共 {{ latest_users.paginator.num_pages }} 页
+                    </span>
+
+                    {% if latest_users.has_next %}
+                        <a href="?latest_page={{ latest_users.next_page_number }}" class="btn btn-secondary" style="margin: 0 0.2rem;">下一页</a>
+                        <a href="?latest_page={{ latest_users.paginator.num_pages }}" class="btn btn-secondary" style="margin: 0 0.2rem;">末页 &raquo;</a>
+                    {% endif %}
+                </span>
+            </div>
+            {% endif %}
         </div>
         {% endif %}
     </div>
@@ -407,6 +449,27 @@
             <div class="user-stat">{{ image.user.username }} | {{ image.created_at|date:"m-d H:i" }}</div>
         </div>
         {% endfor %}
+        
+        <!-- 分页控件 -->
+        {% if latest_images.has_other_pages %}
+        <div class="pagination" style="margin-top: 1rem; text-align: center;">
+            <span class="step-links">
+                {% if latest_images.has_previous %}
+                    <a href="?images_page=1" class="btn btn-secondary" style="margin: 0 0.2rem;">&laquo; 首页</a>
+                    <a href="?images_page={{ latest_images.previous_page_number }}" class="btn btn-secondary" style="margin: 0 0.2rem;">上一页</a>
+                {% endif %}
+
+                <span class="current" style="margin: 0 1rem; color: #4a5568;">
+                    第 {{ latest_images.number }} 页 / 共 {{ latest_images.paginator.num_pages }} 页
+                </span>
+
+                {% if latest_images.has_next %}
+                    <a href="?images_page={{ latest_images.next_page_number }}" class="btn btn-secondary" style="margin: 0 0.2rem;">下一页</a>
+                    <a href="?images_page={{ latest_images.paginator.num_pages }}" class="btn btn-secondary" style="margin: 0 0.2rem;">末页 &raquo;</a>
+                {% endif %}
+            </span>
+        </div>
+        {% endif %}
     </div>
     {% endif %}
 </div>

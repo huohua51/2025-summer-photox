@@ -582,7 +582,7 @@
     <!-- 用户内容统计表格 -->
     {% if content_stats %}
     <div class="analytics-card" style="margin-bottom: 25px;">
-        <h3><span class="icon">📝</span>用户内容统计 (前15名)</h3>
+        <h3><span class="icon">📝</span>用户内容统计</h3>
         <table class="user-table">
             <thead>
                 <tr>
@@ -613,6 +613,27 @@
                 {% endfor %}
             </tbody>
         </table>
+        
+        <!-- 分页控件 -->
+        {% if content_page.has_other_pages %}
+        <div class="pagination" style="margin-top: 1.5rem; text-align: center;">
+            <span class="step-links">
+                {% if content_page.has_previous %}
+                    <a href="?content_page=1" class="btn btn-secondary" style="margin: 0 0.2rem;">&laquo; 首页</a>
+                    <a href="?content_page={{ content_page.previous_page_number }}" class="btn btn-secondary" style="margin: 0 0.2rem;">上一页</a>
+                {% endif %}
+
+                <span class="current" style="margin: 0 1rem; color: #4a5568;">
+                    第 {{ content_page.number }} 页 / 共 {{ content_page.paginator.num_pages }} 页
+                </span>
+
+                {% if content_page.has_next %}
+                    <a href="?content_page={{ content_page.next_page_number }}" class="btn btn-secondary" style="margin: 0 0.2rem;">下一页</a>
+                    <a href="?content_page={{ content_page.paginator.num_pages }}" class="btn btn-secondary" style="margin: 0 0.2rem;">末页 &raquo;</a>
+                {% endif %}
+            </span>
+        </div>
+        {% endif %}
     </div>
     {% endif %}
 

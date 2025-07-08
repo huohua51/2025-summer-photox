@@ -707,7 +707,24 @@ const imageService = {
       console.error('批量收藏图片失败:', error)
       throw error
     }
+  },
+
+
+  /**
+   * AI识别图片地点
+   * @param {number|string} imageId - 图片ID
+   * @returns {Promise<Object>} 识别结果
+   */
+  aiRecognizeLocation: async (imageId) => {
+    try {
+      const response = await api.post(`/images/${imageId}/ai_recognize_location/`)
+      return response
+    } catch (error) {
+      console.error('AI识别位置失败:', error)
+      throw error
+    }
   }
 }
+
 
 export default imageService 

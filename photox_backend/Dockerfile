@@ -37,11 +37,13 @@ WORKDIR /app
 RUN echo "deb https://mirrors.tuna.tsinghua.edu.cn/debian/ bookworm main contrib non-free non-free-firmware\n\
 deb https://mirrors.tuna.tsinghua.edu.cn/debian/ bookworm-updates main contrib non-free non-free-firmware\n\
 deb https://mirrors.tuna.tsinghua.edu.cn/debian-security bookworm-security main contrib non-free non-free-firmware" \
-> /etc/apt/sources.list
+> /etc/apt/sources.list && \
+rm -rf /etc/apt/sources.list.d/*
 
 # 安装构建 mysqlclient 等 Python 包所需的系统依赖
 RUN apt-get update && \
     apt-get install -y gcc default-libmysqlclient-dev pkg-config && \
+    apt-get update && apt-get install -y libgl1 libglib2.0-0 && \
     rm -rf /var/lib/apt/lists/*
 
 # 安装 Python 依赖

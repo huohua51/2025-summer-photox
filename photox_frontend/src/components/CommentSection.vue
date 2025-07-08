@@ -3,7 +3,7 @@
         <div class="like-row">
             <button class="like-btn" :class="{ liked: likedByMe }" @click="$emit('toggle-like')">
                 <!-- 点赞SVG图标 -->
-                <svg class="like-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <svg class="like-icon" viewBox="0 0 24 24" fill="none">
                     <path v-if="likedByMe"
                         d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"
                         fill="currentColor" />
@@ -40,14 +40,19 @@
                 <div v-for="comment in comments" :key="comment.id" class="comment-item">
                     <div class="comment-author">
                         <div class="comment-avatar">
-                            <!-- 用户头像SVG -->
-                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <!-- 用户真实头像 -->
+                            <img v-if="comment.user && comment.user.avatar" :src="comment.user.avatar" alt="用户头像" style="width:36px;height:36px;border-radius:50%;object-fit:cover;" />
+                            <svg v-else viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke="currentColor"
                                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
                                 <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2" />
                             </svg>
                         </div>
                         {{ comment.author }}
+                        <!-- 待审核状态标识 -->
+                        <span v-if="!comment.is_approved" class="pending-approval-badge">
+                            待审核
+                        </span>
                     </div>
                     <div class="comment-content">{{ comment.content }}</div>
                     <div class="comment-time">
@@ -107,7 +112,21 @@
                     <!-- 回复列表 -->
                     <div class="reply-list" v-if="comment.replies && comment.replies.length">
                         <div v-for="reply in comment.replies" :key="reply.id" class="reply-item">
-                            <span class="reply-author">{{ reply.author }}</span>：<span class="reply-content">{{
+                            <span class="reply-author">
+                                <span class="comment-avatar" style="display:inline-block;vertical-align:middle;margin-right:4px;">
+                                    <img v-if="reply.user && reply.user.avatar" :src="reply.user.avatar" alt="用户头像" style="width:24px;height:24px;border-radius:50%;object-fit:cover;" />
+                                    <svg v-else viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:24px;height:24px;">
+                                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke="currentColor"
+                                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                                        <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2" />
+                                    </svg>
+                                </span>
+                                {{ reply.author }}
+                                <!-- 待审核状态标识 -->
+                                <span v-if="!reply.is_approved" class="pending-approval-badge">
+                                    待审核
+                                </span>
+                            </span>：<span class="reply-content">{{
                                 reply.content }}</span>
                             <span class="reply-time">{{ reply.time }}</span>
                             <button class="reply-like-btn" :class="{ liked: reply.likedByMe }"
@@ -153,13 +172,15 @@
 
 <script setup>
 import { ref, watch } from 'vue'
+import { sensitiveWordsService } from '../api/sensitiveWordsService'
+
 const props = defineProps({
     comments: Array,
     likeCount: Number,
     likedByMe: Boolean,
     currentUser: Object
 })
-// console.log(props.currentUser)
+console.log(props.comments)
 const emit = defineEmits(['submit-comment', 'toggle-like', 'toggle-comment-like', 'toggle-reply-like', 'submit-reply', 'delete-comment', 'delete-reply'])
 
 const newComment = ref('')
@@ -170,17 +191,50 @@ function showReplyInput(comment) {
     if (!comment.replyContent) comment.replyContent = ''
 }
 
-function submitReply(comment) {
+async function submitReply(comment) {
     if (!comment.replyContent || !comment.replyContent.trim()) return
-    emit('submit-reply', comment, comment.replyContent)
-    comment.replyContent = ''
-    comment.showReplyInput = false
+    
+    try {
+        // 检测敏感词
+        const result = await sensitiveWordsService.checkText(comment.replyContent)
+        if (result.has_sensitive) {
+            alert(`检测到敏感词：${result.sensitive_words.join(', ')}\n内容将被自动过滤。`)
+            // 使用过滤后的内容
+            emit('submit-reply', comment, result.filtered_text)
+        } else {
+            emit('submit-reply', comment, comment.replyContent)
+        }
+        comment.replyContent = ''
+        comment.showReplyInput = false
+    } catch (error) {
+        console.error('敏感词检测失败:', error)
+        // 如果检测失败，直接提交原内容
+        emit('submit-reply', comment, comment.replyContent)
+        comment.replyContent = ''
+        comment.showReplyInput = false
+    }
 }
 
-function submitComment() {
+async function submitComment() {
     if (!newComment.value.trim()) return
-    emit('submit-comment', newComment.value)
-    newComment.value = ''
+    
+    try {
+        // 检测敏感词
+        const result = await sensitiveWordsService.checkText(newComment.value)
+        if (result.has_sensitive) {
+            alert(`检测到敏感词：${result.sensitive_words.join(', ')}\n内容将被自动过滤。`)
+            // 使用过滤后的内容
+            emit('submit-comment', result.filtered_text)
+        } else {
+            emit('submit-comment', newComment.value)
+        }
+        newComment.value = ''
+    } catch (error) {
+        console.error('敏感词检测失败:', error)
+        // 如果检测失败，直接提交原内容
+        emit('submit-comment', newComment.value)
+        newComment.value = ''
+    }
 }
 
 function deleteComment(comment) {
@@ -423,7 +477,6 @@ function deleteReply(comment, reply) {
 .reply-list {
     margin-left: 32px;
     margin-top: 12px;
-    border-left: 3px solid #f0f7ff;
     padding-left: 16px;
     background: rgba(240, 247, 255, 0.3);
     border-radius: 8px;
@@ -433,6 +486,7 @@ function deleteReply(comment, reply) {
     font-size: 14px;
     padding: 8px 0;
     display: flex;
+    justify-content: center;
     align-items: center;
     gap: 8px;
     border-bottom: 1px dashed #e0e8f0;
@@ -579,17 +633,30 @@ function deleteReply(comment, reply) {
     background: #ff4d4f;
     color: #fff;
     border: none;
-    border-radius: 12px;
+    border-radius: 8px;
     padding: 2px 8px;
     font-size: 0.8rem;
     font-weight: 600;
     cursor: pointer;
-    margin-left: 8px;
+    margin-left: 0;
+    margin-right: 8px;
     transition: all 0.2s;
 }
 
 .reply-delete-btn:hover {
     background: #ff7875;
+}
+
+/* 待审核标识样式 */
+.pending-approval-badge {
+    background-color: #ff9800;
+    color: white;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 500;
+    margin-left: 6px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 @media (max-width: 900px) {

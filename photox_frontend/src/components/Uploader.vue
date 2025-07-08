@@ -77,6 +77,7 @@ import { ref, computed } from 'vue'
 import UploadIcon from './UploadIcon.vue'
 import axios from 'axios'
 import imageService from '../api/imageService'
+import { sensitiveWordsService } from '../api/sensitiveWordsService'
 
 const props = defineProps({
   categories: {
@@ -178,11 +179,37 @@ const startUpload = async () => {
   })
 
   try {
-    // 准备每个文件的标题
-    const filesWithTitles = files.value.map((file, index) => ({
-      file,
-      title: fileTitles.value[index] || file.name
-    }))
+    // 检测每个文件标题中的敏感词
+    const filesWithTitles = []
+    for (let i = 0; i < files.value.length; i++) {
+      const file = files.value[i]
+      const title = fileTitles.value[i] || file.name
+      
+      try {
+        // 检测标题中的敏感词
+        const result = await sensitiveWordsService.checkText(title)
+        if (result.has_sensitive) {
+          alert(`图片标题 "${title}" 包含敏感词：${result.sensitive_words.join(', ')}\n标题将被自动过滤。`)
+          // 使用过滤后的标题
+          filesWithTitles.push({
+            file,
+            title: result.filtered_text
+          })
+        } else {
+          filesWithTitles.push({
+            file,
+            title: title
+          })
+        }
+      } catch (error) {
+        console.error('敏感词检测失败:', error)
+        // 如果检测失败，使用原标题
+        filesWithTitles.push({
+          file,
+          title: title
+        })
+      }
+    }
 
     // 使用批量上传API
     const result = await imageService.uploadImagesWithTitles(filesWithTitles, {

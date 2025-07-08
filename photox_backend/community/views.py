@@ -17,6 +17,7 @@ from images.serializers import ImageSerializer
 from rest_framework.views import APIView
 from rest_framework.generics import ListAPIView
 from rest_framework.pagination import PageNumberPagination
+from utils.sensitive_words import sensitive_filter
 
 User = get_user_model()
 
@@ -27,30 +28,54 @@ class CommentViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticatedOrReadOnly]
     
     def get_queryset(self):
-        queryset = Comment.objects.filter(is_deleted=False)
+        user_id = self.request.query_params.get('user', None)
         
-        # 预加载关联数据以提高性能
+        # 如果指定了用户ID
+        if user_id is not None:
+            # 如果是查看自己的评论，显示所有评论（包括未审核的）
+            if str(user_id) == str(getattr(self.request.user, 'id', None)):
+                queryset = Comment.objects.filter(user_id=user_id, is_deleted=False)
+            else:
+                # 查看其他用户的评论，只显示审核通过的
+                queryset = Comment.objects.filter(user_id=user_id, is_deleted=False, is_approved=True)
+        else:
+            # 没有指定用户ID，显示当前用户的所有评论 + 其他用户的审核通过评论
+            if self.request.user.is_authenticated:
+                queryset = Comment.objects.filter(
+                    Q(user=self.request.user, is_deleted=False) |  # 自己的所有评论
+                    Q(is_deleted=False, is_approved=True)  # 其他用户的审核通过评论
+                )
+            else:
+                # 未登录用户只能看到审核通过的评论
+                queryset = Comment.objects.filter(is_deleted=False, is_approved=True)
+        
         queryset = queryset.select_related('user', 'album', 'image', 'parent')
         queryset = queryset.prefetch_related(
-            Prefetch('replies', queryset=Comment.objects.filter(is_deleted=False))
+            Prefetch('replies', queryset=Comment.objects.filter(is_deleted=False, is_approved=True))
         )
-        
-        # 过滤参数
         album_id = self.request.query_params.get('album')
         image_id = self.request.query_params.get('image')
-        
         if album_id:
             queryset = queryset.filter(album_id=album_id)
         elif image_id:
             queryset = queryset.filter(image_id=image_id)
-            
-        # 只返回顶级评论（parent=None）
         if self.action == 'list':
             queryset = queryset.filter(parent=None)
-            
         return queryset.order_by('-created_at')
     
     def perform_create(self, serializer):
+        # 检查评论内容是否包含敏感词
+        content = serializer.validated_data.get('content', '')
+        if content:
+            content_check = sensitive_filter.check_text(content)
+            if content_check['has_sensitive']:
+                # 记录敏感词检测日志
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning(f"评论包含敏感词: {content_check['sensitive_words']}, 用户: {self.request.user.username}")
+                # 使用过滤后的内容
+                serializer.validated_data['content'] = content_check['filtered_text']
+        
         serializer.save(user=self.request.user)
     
     def destroy(self, request, *args, **kwargs):
@@ -80,7 +105,7 @@ class CommentViewSet(viewsets.ModelViewSet):
 class LikeViewSet(viewsets.GenericViewSet):
     """点赞视图集"""
     serializer_class = LikeSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated] #登录用户才可访问
     
     @action(detail=False, methods=['post'])
     def toggle(self, request):

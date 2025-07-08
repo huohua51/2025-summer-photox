@@ -69,6 +69,7 @@ const fetchImages = async () => {
     const res = await api.images.getList({
       category: categoryName.value,
       is_public: true,
+      is_approved: true, // 只获取审核通过的图片
       page: page.value,
       page_size: pageSize
     })

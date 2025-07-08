@@ -69,8 +69,7 @@ api.interceptors.response.use(
     // 如果是 401 未授权，可能是 token 过期
     if (error.response && error.response.status === 401) {
       console.log('Token可能已过期，尝试刷新...')
-      // 这里可以添加自动刷新token的逻辑
-      // ...
+
     }
     
     // 如果是 500 错误，打印更详细的信息

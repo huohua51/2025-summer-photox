@@ -9,6 +9,7 @@ class AlbumAdmin(admin.ModelAdmin):
     search_fields = ['title', 'description', 'user__username']
     readonly_fields = ['created_at']
     filter_horizontal = ['images']  # 使用水平过滤器方便选择图片
+    list_per_page = 10  # 每页显示10条
     
     def image_count(self, obj):
         return obj.images.count()

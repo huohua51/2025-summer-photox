@@ -177,7 +177,8 @@ const fetchRelatedImages = async () => {
         const params = {
             exclude_id: props.currentImage.id,
             limit: 12,
-            is_public: true // 强制只查公开图片
+            is_public: true, // 强制只查公开图片
+            is_approved: true // 只获取审核通过的图片
         }
 
         // 根据不同过滤器添加不同参数

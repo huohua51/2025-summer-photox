@@ -25,6 +25,13 @@ class Image(models.Model):
     ai_style_analysis = models.JSONField(default=dict, blank=True, verbose_name="AI风格分析")
     ai_emotion_analysis = models.JSONField(default=dict, blank=True, verbose_name="AI情感分析")
     user_tags = models.JSONField(default=list, blank=True, verbose_name="用户自定义标签")
+    
+    # 地理位置信息
+    latitude = models.FloatField(null=True, blank=True, verbose_name="纬度")
+    longitude = models.FloatField(null=True, blank=True, verbose_name="经度")
+    location_name = models.CharField(max_length=255, blank=True, null=True, verbose_name="地点名称")
+
+    is_approved = models.BooleanField(default=False, verbose_name='审核通过')
 
     def __str__(self):
         return self.title or f"Image {self.id}"

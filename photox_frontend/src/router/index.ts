@@ -156,6 +156,16 @@ const router = createRouter({
         title: '探索发现',
         showNavbar: true
       }
+    },
+    {
+      path: '/travel-map',
+      name: 'travel-map',
+      component: () => import('@/views/TravelMapView.vue'),
+      meta: {
+        requiresAuth: true,
+        title: '旅行轨迹',
+        showNavbar: false  // 地图页面不显示导航栏
+      }
     }
   ],
 })

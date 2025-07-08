@@ -7,6 +7,7 @@ class CommentAdmin(admin.ModelAdmin):
     list_filter = ['created_at', 'is_deleted']
     search_fields = ['user__username', 'content']
     raw_id_fields = ['user', 'album', 'parent']
+    list_per_page = 10
 
 @admin.register(Like)
 class LikeAdmin(admin.ModelAdmin):
@@ -14,6 +15,7 @@ class LikeAdmin(admin.ModelAdmin):
     list_filter = ['like_type', 'created_at']
     search_fields = ['user__username']
     raw_id_fields = ['user']
+    list_per_page = 10
 
 @admin.register(Follow)
 class FollowAdmin(admin.ModelAdmin):
@@ -21,6 +23,7 @@ class FollowAdmin(admin.ModelAdmin):
     list_filter = ['created_at']
     search_fields = ['follower__username', 'following__username']
     raw_id_fields = ['follower', 'following']
+    list_per_page = 10
 
 @admin.register(Notification)
 class NotificationAdmin(admin.ModelAdmin):
@@ -28,3 +31,4 @@ class NotificationAdmin(admin.ModelAdmin):
     list_filter = ['notification_type', 'is_read', 'created_at']
     search_fields = ['user__username', 'sender__username', 'content']
     raw_id_fields = ['user', 'sender']
+    list_per_page = 10

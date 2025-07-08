@@ -39,6 +39,16 @@
         </div>
       </div>
 
+      <!-- 功能入口区 -->
+      <div class="feature-entrance">
+        <router-link to="/travel-map" class="travel-map-btn">
+          <svg class="map-icon" viewBox="0 0 24 24" width="20" height="20">
+            <path fill="currentColor" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+          </svg>
+          <span>旅行轨迹</span>
+        </router-link>
+      </div>
+
       <!-- 分类筛选 -->
       <div class="category-filters" v-if="!searchKeyword">
         <div class="filter-tabs">
@@ -208,9 +218,10 @@ const categoryMap = {
 // 加载分类数据
 const loadCategories = async () => {
   try {
-    // 获取已有公开图片的分类
+    // 获取已有公开且审核通过的图片的分类
     const response = await api.images.getList({
       is_public: true,
+      is_approved: true, // 只获取审核通过的图片
       page: 1,
       page_size: 1000  // 获取大量数据来统计分类
     })
@@ -306,9 +317,10 @@ const loadFeed = async (page = 1, append = false) => {
   
   loading.value = true
   try {
-    // 获取所有用户的公开图片，而不是私有图片
+    // 获取所有用户的公开且审核通过的图片
     const response = await api.images.getList({ 
       is_public: true,
+      is_approved: true, // 只获取审核通过的图片
       page: page,
       page_size: 20,
       ordering: '-created_at'
@@ -343,6 +355,7 @@ const loadRecommendations = async () => {
   try {
     const response = await api.images.getList({ 
       is_public: true,
+      is_approved: true, // 只获取审核通过的图片
       page: 1,
       page_size: 20,
       ordering: '-created_at'
@@ -360,6 +373,7 @@ const loadPublicImages = async () => {
   try {
     const response = await api.images.getList({ 
       is_public: true,
+      is_approved: true, // 只获取审核通过的图片
       page_size: 12,
       ordering: '-created_at'
     })
@@ -483,10 +497,7 @@ const updateColumnCount = () => {
 .btn-primary {
   background: var(--primary-color);
   color: white;
-  border-radius: 8px;
-  padding: 8px 24px;
   text-decoration: none;
-  font-weight: 600;
   transition: background 0.2s;
 }
 
@@ -581,6 +592,38 @@ const updateColumnCount = () => {
   color: var(--text-color);
 }
 
+/* 功能入口区 */
+.feature-entrance {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px;
+  padding: 0 20px;
+}
+
+.travel-map-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: 25px;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 15px;
+  transition: all 0.3s;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+}
+
+.travel-map-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+.map-icon {
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+}
+
 /* 分类筛选 */
 .category-filters {
   margin-bottom: 24px;
@@ -594,11 +637,11 @@ const updateColumnCount = () => {
 }
 
 .filter-tab {
-  background: var(--secondary-color);
-  border: 1px solid var(--border-color);
+  background: #fff;
+  border: 1px solid #222;
   border-radius: 20px;
   padding: 8px 16px;
-  color: var(--text-color);
+  color: #222;
   cursor: pointer;
   transition: all 0.3s;
   white-space: nowrap;
@@ -607,14 +650,15 @@ const updateColumnCount = () => {
 }
 
 .filter-tab:hover {
-  border-color: #2196f3;
-  color: #2196f3;
+  background: #eee;
+  color: #111;
+  border-color: #111;
 }
 
 .filter-tab.active {
-  background: #2196f3;
-  border-color: #2196f3;
-  color: white;
+  background: #111;
+  border-color: #111;
+  color: #fff;
 }
 
 /* 加载状态 */

@@ -25,6 +25,7 @@ class Comment(models.Model):
     content = models.TextField(verbose_name="评论内容")
     parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='replies', verbose_name="父评论")
     is_deleted = models.BooleanField(default=False, verbose_name="是否删除")
+    is_approved = models.BooleanField(default=False, verbose_name='审核通过')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="创建时间")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="更新时间")
 

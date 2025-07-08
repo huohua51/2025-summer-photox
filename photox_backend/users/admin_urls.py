@@ -11,4 +11,8 @@ urlpatterns = [
     path('user-analytics/', admin_views.user_analytics, name='user_analytics'),
     path('content-moderation/', admin_views.content_moderation, name='content_moderation'),
     path('albums/album/', admin_views.album_management, name='album_management'),
+    path('users/', admin_views.user_management, name='user_management'),
+    path('users/<int:user_id>/edit/', admin_views.edit_user, name='edit_user'),
+    path('users/<int:user_id>/delete/', admin_views.delete_user, name='delete_user'),
+    path('sensitive-words/', admin_views.sensitive_words_management, name='sensitive_words_management'),
 ] 

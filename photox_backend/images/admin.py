@@ -7,3 +7,4 @@ class ImageAdmin(admin.ModelAdmin):
     list_display = ('id', 'title', 'user', 'created_at', 'is_public')
     search_fields = ('title', 'tags')
     list_filter = ('is_public', 'created_at')
+    list_per_page = 10  # 每页显示10条

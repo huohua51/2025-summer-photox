@@ -4,40 +4,14 @@ from django.contrib.auth.models import Group
 from .models import CustomUser
 
 # 自定义用户管理界面
-@admin.register(CustomUser)
 class CustomUserAdmin(UserAdmin):
-    # 列表页显示的字段
-    list_display = ('username', 'email', 'first_name', 'last_name', 'is_staff', 'is_active', 'date_joined')
-    
-    # 列表页可以直接编辑的字段
-    list_editable = ('is_active',)
-    
-    # 右侧过滤器
-    list_filter = ('is_staff', 'is_superuser', 'is_active', 'groups', 'date_joined')
-    
-    # 搜索字段
-    search_fields = ('username', 'first_name', 'last_name', 'email')
-    
-    # 排序
-    ordering = ('-date_joined',)
-    
-    # 分组显示字段
-    fieldsets = (
-        (None, {'fields': ('username', 'password')}),
-        ('个人信息', {'fields': ('first_name', 'last_name', 'email', 'avatar', 'bio')}),
-        ('权限', {
-            'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions'),
-        }),
-        ('重要日期', {'fields': ('last_login', 'date_joined')}),
-    )
-    
-    # 添加用户时的字段
-    add_fieldsets = (
-        (None, {
-            'classes': ('wide',),
-            'fields': ('username', 'email', 'password1', 'password2'),
-        }),
-    )
+    list_per_page = 10
+    # 可根据需要自定义list_display等
+    list_display = ('username', 'email', 'first_name', 'last_name', 'is_staff', 'is_superuser', 'is_active', 'is_verified', 'role')
+    search_fields = ('username', 'email', 'first_name', 'last_name')
+    list_filter = ('is_staff', 'is_superuser', 'is_active', 'is_verified', 'role')
+
+admin.site.register(CustomUser, CustomUserAdmin)
 
 # 自定义站点标题
 admin.site.site_header = "Photox 管理后台"
