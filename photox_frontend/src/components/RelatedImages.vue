@@ -29,14 +29,22 @@
                     <div class="loading-spinner"></div>
                     <p>AI智能分析中...</p>
                 </div>
-                <div v-else>
-                    <h4>AI智能分析结果</h4>
-                    <p>{{ aiDescription }}</p>
+                <div v-else class="ai-analysis-box">
+                  <div class="ai-analysis-title">
+                    <svg style="vertical-align: middle; margin-right: 8px;" width="22" height="22" viewBox="0 0 24 24" fill="none">
+                      <circle cx="12" cy="12" r="10" stroke="#2992e2" stroke-width="2" fill="#eaf6fd"/>
+                      <path d="M8 12h8M12 8v8" stroke="#2992e2" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                    <span>AI智能分析结果</span>
+                  </div>
+                  <div class="ai-analysis-content">
+                    <p v-for="(para, idx) in aiDescription" :key="idx" class="ai-analysis-para">{{ para }}</p>
+                  </div>
                 </div>
             </div>
-
             <!-- 推荐图片网格 -->
             <div v-if="displayImages.length > 0" class="related-grid">
+               
                 <div 
                     v-for="img in displayImages" 
                     :key="img.id" 
@@ -114,7 +122,7 @@
             </div>
 
             <!-- 空状态 -->
-            <div v-else class="empty-state">
+            <div v-else-if="activeFilter !== 'ai'" class="empty-state">
                 <div class="empty-icon">
                     <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                         <circle cx="11" cy="11" r="8"></circle>
@@ -266,7 +274,7 @@ const getRecommendationLabel = (image) => {
         author: '作者作品',
         popular: '热门推荐'
     }
-    return labels[image.recommendationType] || '推荐'
+    return labels[image.recommendationType] || 'AI智能精选'
 }
 
 // 显示的图片列表
@@ -281,11 +289,37 @@ const setFilter = async (filterKey) => {
         aiLoading.value = true
         aiDescription.value = ''
         try {
-            // 调用后端AI分析接口
             const res = await apiService.images.aiDescription(props.currentImage.id)
-            aiDescription.value = res.description || '暂无分析结果'
+            if (Array.isArray(res.description)) {
+                aiDescription.value = res.description
+            } else if (typeof res.description === 'string') {
+                // 先尝试 JSON.parse
+                try {
+                    const arr = JSON.parse(res.description)
+                    if (Array.isArray(arr)) {
+                        aiDescription.value = arr
+                    } else {
+                        aiDescription.value = res.description.split('\n').filter(Boolean)
+                    }
+                } catch {
+                    // 如果是Python风格的list字符串（单引号包裹元素）
+                    const str = res.description.trim()
+                    if (str.startsWith('[') && str.endsWith(']')) {
+                        // 用正则提取每个段落
+                        aiDescription.value = str
+                            .slice(1, -1) // 去掉首尾中括号
+                            .split(/',\s*'/) // 按单引号和逗号分割
+                            .map(s => s.replace(/^'/, '').replace(/'$/, '').replace(/^"/, '').replace(/"$/, '').trim())
+                            .filter(Boolean)
+                    } else {
+                        aiDescription.value = res.description.split('\n').filter(Boolean)
+                    }
+                }
+            } else {
+                aiDescription.value = ['暂无分析结果']
+            }
         } catch (e) {
-            aiDescription.value = 'AI分析失败'
+            aiDescription.value = ['AI分析失败']
         }
         aiLoading.value = false
     } else {
@@ -760,5 +794,40 @@ onMounted(() => {
         width: 100%;
         justify-content: center;
     }
+}
+
+.ai-analysis-box {
+    background: #d5f0ff;
+    border: 1.5px solid #2992e2;
+    border-radius: 10px;
+    padding: 24px 28px 18px 28px;
+    margin-bottom: 24px;
+    box-shadow: 0 2px 12px 0 rgba(41,146,226,0.08);
+    max-width: 1200px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.ai-analysis-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #2992e2;
+    margin-bottom: 18px;
+    display: flex;
+    align-items: center;
+}
+
+.ai-analysis-content {
+    padding-right: 6px;
+}
+
+.ai-analysis-para {
+    text-indent: 2em;
+    margin-bottom: 1em;
+    font-size: 1.08rem;
+    color: #222;
+    line-height: 1.9;
+    letter-spacing: 0.02em;
+    word-break: break-all;
 }
 </style>

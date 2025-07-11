@@ -157,7 +157,7 @@ onUnmounted(() => {
     display: flex;
     flex-direction: column;
     align-items: center;
-    background-color: var(--bg-color);
+    background-color: white;
     width: 20vw;
     height: 50vh;
     border: 2px solid var(--primary-color);

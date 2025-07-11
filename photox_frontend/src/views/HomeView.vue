@@ -638,10 +638,10 @@ const updateColumnCount = () => {
 
 .filter-tab {
   background: #fff;
-  border: 1px solid #222;
+  border: 1px solid #4a78d3;
   border-radius: 20px;
   padding: 8px 16px;
-  color: #222;
+  color: #6a92e8;
   cursor: pointer;
   transition: all 0.3s;
   white-space: nowrap;
@@ -651,13 +651,13 @@ const updateColumnCount = () => {
 
 .filter-tab:hover {
   background: #eee;
-  color: #111;
-  border-color: #111;
+  color: #456ec0;
+  border-color: #6285d1;
 }
 
 .filter-tab.active {
-  background: #111;
-  border-color: #111;
+  background: #5f86d4;
+  border-color: #456ec0;
   color: #fff;
 }
 

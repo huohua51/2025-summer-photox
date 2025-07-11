@@ -45,9 +45,9 @@
         />
 
         <!-- 图片描述 -->
-        <div v-if="image.ai_description" class="description-section">
+        <div v-if="image.ai_description && image.ai_description.length" class="description-section">
           <h3 class="section-title">图片描述</h3>
-          <p class="description-text">{{ image.ai_description }}</p>
+          <p v-for="(para, idx) in image.ai_description" :key="idx" class="description-text">{{ para }}</p>
         </div>
 
         <!-- 评论区 -->
